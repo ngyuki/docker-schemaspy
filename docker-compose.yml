@@ -1,0 +1,40 @@
+version: "3.7"
+
+services:
+  schemaspy:
+    image: ngyuki/schemaspy
+    build: .
+    depends_on:
+      - mysql5
+      - mysql8
+    volumes:
+      - ./:/work/
+    working_dir: /work/
+    command:
+      - sh
+      - -c
+      - |
+        mkdir -p output/
+
+        mysqladmin ping -w10 -h mysql5 -u root
+        mysqladmin ping -w10 -h mysql8 -u root
+
+        cat dummy.sql | mysql -v -h mysql5 -u root dummy
+        cat dummy.sql | mysql -v -h mysql8 -u root dummy
+
+        schemaspy -o output/mysql5/ -t mysql -host mysql5:3306 -db dummy -u root -s dummy
+        schemaspy -o output/mysql8/ -t mysql -host mysql8:3306 -db dummy -u root -s dummy
+
+  mysql5:
+    image: mysql:5
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+      MYSQL_DATABASE: dummy
+
+  mysql8:
+    image: mysql:8
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+      MYSQL_DATABASE: dummy
+    command:
+      - --default_authentication_plugin=mysql_native_password
